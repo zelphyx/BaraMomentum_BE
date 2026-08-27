@@ -1,0 +1,24 @@
+version: '3.9'
+
+services:
+  mysql-test:
+    image: mysql:8.0
+    container_name: bemfsm-mysql-test
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_DATABASE: bemfsm_test
+      MYSQL_USER: bemfsm
+      MYSQL_PASSWORD: bemfsm
+      TZ: Asia/Jakarta
+    command: >
+      --character-set-server=utf8mb4
+      --collation-server=utf8mb4_0900_ai_ci
+    ports:
+      - '3307:3306'
+    tmpfs:
+      - /var/lib/mysql
+    healthcheck:
+      test: ['CMD', 'mysqladmin', 'ping', '-h', 'localhost', '-uroot', '-proot']
+      interval: 5s
+      timeout: 3s
+      retries: 10
