@@ -39,6 +39,8 @@ describe('validateEnv', () => {
     ARGON2_MEMORY_COST: 19456,
     ARGON2_TIME_COST: 2,
     ARGON2_PARALLELISM: 1,
+    THROTTLE_TTL_MS: 60000,
+    THROTTLE_LIMIT: 100,
   };
 
   it('accepts a complete valid env', () => {
@@ -53,7 +55,10 @@ describe('validateEnv', () => {
 
   it('rejects short JWT_ACCESS_SECRET', () => {
     expect(() =>
-      validateEnv({ ...validEnv, JWT_ACCESS_SECRET: 'short' } as unknown as Record<string, unknown>),
+      validateEnv({ ...validEnv, JWT_ACCESS_SECRET: 'short' } as unknown as Record<
+        string,
+        unknown
+      >),
     ).toThrow();
   });
 

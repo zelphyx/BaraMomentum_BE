@@ -57,11 +57,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const errorBody: Record<string, unknown> = { code, message, requestId };
     if (fields) errorBody.fields = fields;
     const isKnownError = exception instanceof AppError || exception instanceof HttpException;
-    if (
-      process.env.NODE_ENV !== 'production' &&
-      exception instanceof Error &&
-      !isKnownError
-    ) {
+    if (process.env.NODE_ENV !== 'production' && exception instanceof Error && !isKnownError) {
       errorBody.stack = exception.stack;
     }
 

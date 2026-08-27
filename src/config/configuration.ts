@@ -49,7 +49,12 @@ export class EnvConfig {
   LOG_LEVEL!: string;
 
   @ClassTransform(({ value }) =>
-    typeof value === 'string' ? value.split(',').map((s) => s.trim()).filter(Boolean) : value,
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : value,
   )
   FRONTEND_ORIGINS!: string[];
 
@@ -110,7 +115,12 @@ export class EnvConfig {
   CDN_BASE_URL!: string;
 
   @ClassTransform(({ value }) =>
-    typeof value === 'string' ? value.split(',').map((s) => s.trim()).filter(Boolean) : value,
+    typeof value === 'string'
+      ? value
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : value,
   )
   INLINE_IMAGE_ALLOWED_DOMAINS!: string[];
 
@@ -170,6 +180,14 @@ export class EnvConfig {
   @IsInt()
   @Min(1)
   ARGON2_PARALLELISM!: number;
+
+  @IsInt()
+  @Min(1000)
+  THROTTLE_TTL_MS!: number;
+
+  @IsInt()
+  @Min(1)
+  THROTTLE_LIMIT!: number;
 }
 
 function toNumber(value: unknown): number {
@@ -196,6 +214,8 @@ export function loadEnvConfig(): EnvConfig {
     ARGON2_TIME_COST: toNumber(process.env.ARGON2_TIME_COST ?? 2),
     ARGON2_PARALLELISM: toNumber(process.env.ARGON2_PARALLELISM ?? 1),
     METRICS_ENABLED: toBool(process.env.METRICS_ENABLED ?? false),
+    THROTTLE_TTL_MS: toNumber(process.env.THROTTLE_TTL_MS ?? 60000),
+    THROTTLE_LIMIT: toNumber(process.env.THROTTLE_LIMIT ?? 100),
   };
   const validated = plainToInstance(EnvConfig, raw, { enableImplicitConversion: false });
   const errors = validateSync(validated, { skipMissingProperties: false });
@@ -217,6 +237,8 @@ export function validateEnv(env: Record<string, unknown>): EnvConfig {
     ARGON2_TIME_COST: toNumber(env.ARGON2_TIME_COST),
     ARGON2_PARALLELISM: toNumber(env.ARGON2_PARALLELISM),
     METRICS_ENABLED: toBool(env.METRICS_ENABLED),
+    THROTTLE_TTL_MS: toNumber(env.THROTTLE_TTL_MS),
+    THROTTLE_LIMIT: toNumber(env.THROTTLE_LIMIT),
   };
   const validated = plainToInstance(EnvConfig, transformed, { enableImplicitConversion: false });
   const errors = validateSync(validated, { skipMissingProperties: false });
