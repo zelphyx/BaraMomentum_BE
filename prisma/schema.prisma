@@ -1,5 +1,6 @@
 // Backend CMS BEM FSM UNDIP 2026
-// Phase 0: Identity tables saja. Phase 1-5 tambahkan tabel di migration terpisah.
+// Phase 0: Identity tables. Phase 1: tambah roles, permissions, role_permissions,
+// user_unit_assignments, audit_logs, failed_login_count/locked_until di users.
 
 generator client {
   provider      = "prisma-client-js"
@@ -16,15 +17,15 @@ datasource db {
 // ============================================================
 
 enum UserStatus {
-  INVITED
+  PENDING_INVITATION
   ACTIVE
-  INACTIVE
+  SUSPENDED
 }
 
 enum UserRoleCode {
   SUPER_ADMIN
-  CONTENT_EDITOR
-  UNIT_ADMIN
+  ADMIN
+  EDITOR
 }
 
 model User {
@@ -34,11 +35,13 @@ model User {
   passwordHash             String?      @map("password_hash") @db.VarChar(255)
   avatarMediaId            String?      @map("avatar_media_id") @db.Char(36)
   roleCode                 UserRoleCode @map("role_code")
-  status                   UserStatus   @default(INVITED)
+  status                   UserStatus   @default(PENDING_INVITATION)
   lastLoginAt              DateTime?    @map("last_login_at") @db.DateTime(3)
   invitedAt                DateTime?    @map("invited_at") @db.DateTime(3)
   invitationAcceptedAt     DateTime?    @map("invitation_accepted_at") @db.DateTime(3)
   passwordMustChange       Boolean      @default(false) @map("password_must_change")
+  failedLoginCount         Int          @default(0) @map("failed_login_count")
+  lockedUntil              DateTime?    @map("locked_until") @db.DateTime(3)
   createdById              String?      @map("created_by_id") @db.Char(36)
   updatedById              String?      @map("updated_by_id") @db.Char(36)
   createdAt                DateTime     @default(now()) @map("created_at") @db.DateTime(3)
@@ -50,13 +53,66 @@ model User {
   created   User[] @relation("UserCreatedBy")
   updated   User[] @relation("UserUpdatedBy")
 
-  refreshSessions     RefreshSession[]
-  passwordResetTokens PasswordResetToken[]
-  invitationTokens    InvitationToken[]
+  refreshSessions      RefreshSession[]
+  passwordResetTokens  PasswordResetToken[]
+  invitationTokens     InvitationToken[]
+  unitAssignments      UserUnitAssignment[]
+  auditLogs            AuditLog[]
 
   @@index([roleCode, status, deletedAt])
   @@index([deletedAt])
   @@map("users")
+}
+
+model Role {
+  id          String      @id @db.Char(36)
+  code        UserRoleCode @unique
+  name        String      @db.VarChar(80)
+  description String?     @db.VarChar(255)
+  createdAt   DateTime    @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+
+  rolePermissions      RolePermission[]
+  userUnitAssignments  UserUnitAssignment[]
+
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @db.Char(36)
+  code        String   @unique @db.VarChar(100)
+  description String?  @db.VarChar(255)
+  createdAt   DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  rolePermissions RolePermission[]
+
+  @@map("permissions")
+}
+
+model RolePermission {
+  roleId       String @map("role_id") @db.Char(36)
+  permissionId String @map("permission_id") @db.Char(36)
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+  @@map("role_permissions")
+}
+
+model UserUnitAssignment {
+  userId             String   @map("user_id") @db.Char(36)
+  organizationUnitId String   @map("organization_unit_id") @db.Char(36)
+  roleId             String   @map("role_id") @db.Char(36)
+  createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, organizationUnitId])
+  @@map("user_unit_assignments")
 }
 
 model RefreshSession {
@@ -71,9 +127,9 @@ model RefreshSession {
   replacedBySessionId   String?   @map("replaced_by_session_id") @db.Char(36)
   createdAt             DateTime  @default(now()) @map("created_at") @db.DateTime(3)
 
-  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  replacedBySession   RefreshSession?  @relation("RefreshSessionChain", fields: [replacedBySessionId], references: [id])
-  replacedSessions    RefreshSession[] @relation("RefreshSessionChain")
+  user              User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBySession RefreshSession? @relation("RefreshSessionChain", fields: [replacedBySessionId], references: [id])
+  replacedSessions  RefreshSession[] @relation("RefreshSessionChain")
 
   @@index([userId, revokedAt])
   @@index([expiresAt])
@@ -108,4 +164,26 @@ model InvitationToken {
   @@index([userId])
   @@index([expiresAt])
   @@map("invitation_tokens")
+}
+
+model AuditLog {
+  id           String   @id @db.Char(36)
+  actorId      String?  @map("actor_id") @db.Char(36)
+  action       String   @db.VarChar(64)
+  resourceType String   @map("resource_type") @db.VarChar(64)
+  resourceId   String?  @map("resource_id") @db.Char(36)
+  beforeJson   Json?    @map("before_json")
+  afterJson    Json?    @map("after_json")
+  ip           String?  @db.VarChar(45)
+  userAgent    String?  @map("user_agent") @db.Text
+  requestId    String?  @map("request_id") @db.Char(36)
+  metadata     Json?
+  createdAt    DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  actor User? @relation(fields: [actorId], references: [id], onDelete: SetNull)
+
+  @@index([actorId, createdAt])
+  @@index([resourceType, resourceId, createdAt])
+  @@index([action, createdAt])
+  @@map("audit_logs")
 }
