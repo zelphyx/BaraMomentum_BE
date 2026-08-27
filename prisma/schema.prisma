@@ -1,0 +1,111 @@
+// Backend CMS BEM FSM UNDIP 2026
+// Phase 0: Identity tables saja. Phase 1-5 tambahkan tabel di migration terpisah.
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// IDENTITY
+// ============================================================
+
+enum UserStatus {
+  INVITED
+  ACTIVE
+  INACTIVE
+}
+
+enum UserRoleCode {
+  SUPER_ADMIN
+  CONTENT_EDITOR
+  UNIT_ADMIN
+}
+
+model User {
+  id                       String       @id @db.Char(36)
+  name                     String       @db.VarChar(120)
+  email                    String       @unique @db.VarChar(191)
+  passwordHash             String?      @map("password_hash") @db.VarChar(255)
+  avatarMediaId            String?      @map("avatar_media_id") @db.Char(36)
+  roleCode                 UserRoleCode @map("role_code")
+  status                   UserStatus   @default(INVITED)
+  lastLoginAt              DateTime?    @map("last_login_at") @db.DateTime(3)
+  invitedAt                DateTime?    @map("invited_at") @db.DateTime(3)
+  invitationAcceptedAt     DateTime?    @map("invitation_accepted_at") @db.DateTime(3)
+  passwordMustChange       Boolean      @default(false) @map("password_must_change")
+  createdById              String?      @map("created_by_id") @db.Char(36)
+  updatedById              String?      @map("updated_by_id") @db.Char(36)
+  createdAt                DateTime     @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt                DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt                DateTime?    @map("deleted_at") @db.DateTime(3)
+
+  createdBy User?  @relation("UserCreatedBy", fields: [createdById], references: [id])
+  updatedBy User?  @relation("UserUpdatedBy", fields: [updatedById], references: [id])
+  created   User[] @relation("UserCreatedBy")
+  updated   User[] @relation("UserUpdatedBy")
+
+  refreshSessions     RefreshSession[]
+  passwordResetTokens PasswordResetToken[]
+  invitationTokens    InvitationToken[]
+
+  @@index([roleCode, status, deletedAt])
+  @@index([deletedAt])
+  @@map("users")
+}
+
+model RefreshSession {
+  id                    String    @id @db.Char(36)
+  userId                String    @map("user_id") @db.Char(36)
+  tokenHash             String    @unique @map("token_hash") @db.VarChar(255)
+  userAgent             String?   @map("user_agent") @db.VarChar(500)
+  ipAddress             String?   @map("ip_address") @db.VarChar(64)
+  expiresAt             DateTime  @map("expires_at") @db.DateTime(3)
+  lastUsedAt            DateTime? @map("last_used_at") @db.DateTime(3)
+  revokedAt             DateTime? @map("revoked_at") @db.DateTime(3)
+  replacedBySessionId   String?   @map("replaced_by_session_id") @db.Char(36)
+  createdAt             DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user                User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  replacedBySession   RefreshSession?  @relation("RefreshSessionChain", fields: [replacedBySessionId], references: [id])
+  replacedSessions    RefreshSession[] @relation("RefreshSessionChain")
+
+  @@index([userId, revokedAt])
+  @@index([expiresAt])
+  @@map("refresh_sessions")
+}
+
+model PasswordResetToken {
+  id          String    @id @db.Char(36)
+  userId      String    @map("user_id") @db.Char(36)
+  tokenHash   String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt   DateTime  @map("expires_at") @db.DateTime(3)
+  consumedAt  DateTime? @map("consumed_at") @db.DateTime(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("password_reset_tokens")
+}
+
+model InvitationToken {
+  id          String    @id @db.Char(36)
+  userId      String    @map("user_id") @db.Char(36)
+  tokenHash   String    @unique @map("token_hash") @db.VarChar(255)
+  expiresAt   DateTime  @map("expires_at") @db.DateTime(3)
+  consumedAt  DateTime? @map("consumed_at") @db.DateTime(3)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+  @@map("invitation_tokens")
+}
