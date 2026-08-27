@@ -13,6 +13,7 @@ export const ErrorCode = {
   MEDIA_IN_USE: 'MEDIA_IN_USE',
   LAST_SUPER_ADMIN: 'LAST_SUPER_ADMIN',
   IF_MATCH_REQUIRED: 'IF_MATCH_REQUIRED',
+  ACCOUNT_LOCKED: 'ACCOUNT_LOCKED',
 } as const;
 
 export type ErrorCodeType = (typeof ErrorCode)[keyof typeof ErrorCode];
