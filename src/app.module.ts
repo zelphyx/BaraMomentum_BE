@@ -5,6 +5,7 @@ import { CommonModule } from './common/common.module';
 import { loadEnvConfig } from './config/configuration';
 import { PrismaModule } from './database/prisma.module';
 import { HealthModule } from './modules/health/health.module';
+import { IdentityModule } from './modules/identity/identity.module';
 
 const env = loadEnvConfig();
 
@@ -19,6 +20,7 @@ const env = loadEnvConfig();
       },
     ]),
     HealthModule,
+    IdentityModule,
   ],
   providers: [
     {

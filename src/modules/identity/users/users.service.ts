@@ -28,8 +28,13 @@ export class UsersService {
     input: CreateUserDto,
     actorId: string,
     meta: RequestMetaInfo,
-  ): Promise<{ user: { id: string; email: string; name: string; roleCode: string }; tempPassword: string }> {
-    const exists = await this.prisma.user.findUnique({ where: { email: input.email.toLowerCase() } });
+  ): Promise<{
+    user: { id: string; email: string; name: string; roleCode: string };
+    tempPassword: string;
+  }> {
+    const exists = await this.prisma.user.findUnique({
+      where: { email: input.email.toLowerCase() },
+    });
     if (exists) throw new AppError(ErrorCode.CONFLICT, 'Email sudah digunakan', 409);
 
     const tempPassword = crypto.randomBytes(18).toString('base64url');
@@ -89,7 +94,11 @@ export class UsersService {
         },
       });
       if (activeSuperAdmins === 0) {
-        throw new AppError(ErrorCode.LAST_SUPER_ADMIN, 'Tidak dapat mengubah Super Admin terakhir', 403);
+        throw new AppError(
+          ErrorCode.LAST_SUPER_ADMIN,
+          'Tidak dapat mengubah Super Admin terakhir',
+          403,
+        );
       }
     }
 
@@ -131,7 +140,11 @@ export class UsersService {
         },
       });
       if (activeSuperAdmins === 0) {
-        throw new AppError(ErrorCode.LAST_SUPER_ADMIN, 'Tidak dapat menghapus Super Admin terakhir', 403);
+        throw new AppError(
+          ErrorCode.LAST_SUPER_ADMIN,
+          'Tidak dapat menghapus Super Admin terakhir',
+          403,
+        );
       }
     }
     await this.session.revokeAll(id);

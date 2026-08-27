@@ -20,7 +20,10 @@ describe('AuthService (integration)', () => {
 
   beforeAll(async () => {
     const module = await Test.createTestingModule({
-      imports: [PrismaModule, JwtModule.register({ secret: 'x'.repeat(32), signOptions: { expiresIn: '15m' } })],
+      imports: [
+        PrismaModule,
+        JwtModule.register({ secret: 'x'.repeat(32), signOptions: { expiresIn: '15m' } }),
+      ],
       providers: [
         AuthService,
         TokenService,
@@ -34,21 +37,29 @@ describe('AuthService (integration)', () => {
     }).compile();
     auth = module.get(AuthService);
     prisma = module.get(PrismaService);
+    // Ensure EDITOR role exists (seed may not have run).
+    await prisma.role.upsert({
+      where: { code: 'EDITOR' },
+      update: {},
+      create: { id: uuidv4(), code: 'EDITOR', name: 'Editor', description: 'Kelola artikel' },
+    });
   });
 
   beforeEach(async () => {
     await prisma.refreshSession.deleteMany({ where: { userId } });
     await prisma.passwordResetToken.deleteMany({ where: { userId } });
-    await prisma.auditLog.deleteMany({ where: { OR: [{ actorId: userId }, { resourceId: userId }] } });
+    await prisma.auditLog.deleteMany({
+      where: { OR: [{ actorId: userId }, { resourceId: userId }] },
+    });
     await prisma.user.deleteMany({ where: { email } });
-    const role = await prisma.role.findUnique({ where: { code: 'EDITOR' } });
-    expect(role).not.toBeNull();
   });
 
   afterAll(async () => {
     await prisma.refreshSession.deleteMany({ where: { userId } });
     await prisma.passwordResetToken.deleteMany({ where: { userId } });
-    await prisma.auditLog.deleteMany({ where: { OR: [{ actorId: userId }, { resourceId: userId }] } });
+    await prisma.auditLog.deleteMany({
+      where: { OR: [{ actorId: userId }, { resourceId: userId }] },
+    });
     await prisma.user.deleteMany({ where: { email } });
     await prisma.$disconnect();
   });
@@ -112,7 +123,9 @@ describe('AuthService (integration)', () => {
       },
     });
     for (let i = 0; i < 10; i++) {
-      await auth.login({ email, password: 'wrong', ip: null, userAgent: null }).catch(() => undefined);
+      await auth
+        .login({ email, password: 'wrong', ip: null, userAgent: null })
+        .catch(() => undefined);
     }
     await expect(
       auth.login({ email, password: 'Password123!Secret', ip: null, userAgent: null }),

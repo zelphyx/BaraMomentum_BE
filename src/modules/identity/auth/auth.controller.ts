@@ -19,10 +19,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { JwtAuthGuard, Public } from './jwt-auth.guard';
 import { CurrentUser, AuthenticatedUser } from '../../../common/decorators/current-user.decorator';
-import {
-  RequestMeta,
-  RequestMetaInfo,
-} from '../../../common/decorators/request-meta.decorator';
+import { RequestMeta, RequestMetaInfo } from '../../../common/decorators/request-meta.decorator';
 import { loadEnvConfig } from '../../../config/configuration';
 
 const env = loadEnvConfig();

@@ -39,8 +39,8 @@ describe('PermissionsGuard', () => {
 
   it('throws ForbiddenException when user lacks permission', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue(['users.delete']);
-    expect(() =>
-      guard.canActivate(makeContext({ permissions: ['users.read'] })),
-    ).toThrow(ForbiddenException);
+    expect(() => guard.canActivate(makeContext({ permissions: ['users.read'] }))).toThrow(
+      ForbiddenException,
+    );
   });
 });

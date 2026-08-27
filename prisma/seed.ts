@@ -78,7 +78,7 @@ async function main(): Promise<void> {
     await prisma.role.upsert({
       where: { code: role.code },
       update: { name: role.name, description: role.description },
-      create: { id: uuidv4(), code: role.code, name: role.name, description: role.description },
+      create: { id: uuidv4(), code: role.code, name: role.name, description: role.description, updatedAt: new Date() },
     });
   }
   console.log(`[seed] ${ROLES.length} roles ter-seed.`);

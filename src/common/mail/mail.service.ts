@@ -29,9 +29,7 @@ export class MailService {
       port: config.port,
       secure: false,
       auth:
-        config.user && config.password
-          ? { user: config.user, pass: config.password }
-          : undefined,
+        config.user && config.password ? { user: config.user, pass: config.password } : undefined,
     });
   }
 

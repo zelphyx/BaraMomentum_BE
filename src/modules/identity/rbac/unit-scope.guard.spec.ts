@@ -35,18 +35,14 @@ describe('UnitScopeGuard', () => {
   it('allows when all body unit ids are in user scopes', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue('unitIds');
     expect(
-      guard.canActivate(
-        makeContext({ unitScopes: ['u-1', 'u-2'] }, { unitIds: ['u-1'] }),
-      ),
+      guard.canActivate(makeContext({ unitScopes: ['u-1', 'u-2'] }, { unitIds: ['u-1'] })),
     ).toBe(true);
   });
 
   it('throws when body unit id not in user scopes', () => {
     jest.spyOn(reflector, 'getAllAndOverride').mockReturnValue('unitIds');
     expect(() =>
-      guard.canActivate(
-        makeContext({ unitScopes: ['u-1'] }, { unitIds: ['u-1', 'u-3'] }),
-      ),
+      guard.canActivate(makeContext({ unitScopes: ['u-1'] }, { unitIds: ['u-1', 'u-3'] })),
     ).toThrow(ForbiddenException);
   });
 

@@ -1,10 +1,10 @@
 import { IsString, MinLength } from 'class-validator';
 
-export class ResetPasswordDto {
+export class AcceptInvitationDto {
   @IsString()
   token!: string;
 
   @IsString()
   @MinLength(12)
-  newPassword!: string;
+  password!: string;
 }

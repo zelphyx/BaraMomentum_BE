@@ -45,7 +45,7 @@ model User {
   createdById              String?      @map("created_by_id") @db.Char(36)
   updatedById              String?      @map("updated_by_id") @db.Char(36)
   createdAt                DateTime     @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt                DateTime     @updatedAt @map("updated_at") @db.DateTime(3)
+  updatedAt                DateTime     @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
   deletedAt                DateTime?    @map("deleted_at") @db.DateTime(3)
 
   createdBy User?  @relation("UserCreatedBy", fields: [createdById], references: [id])
@@ -70,7 +70,7 @@ model Role {
   name        String      @db.VarChar(80)
   description String?     @db.VarChar(255)
   createdAt   DateTime    @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt   DateTime    @updatedAt @map("updated_at") @db.DateTime(3)
+  updatedAt   DateTime    @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
 
   rolePermissions      RolePermission[]
   userUnitAssignments  UserUnitAssignment[]
