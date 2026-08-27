@@ -6,6 +6,7 @@
   "transform": {
     "^.+\\.(t|j)s$": ["ts-jest", { "tsconfig": "tsconfig.test.json" }]
   },
+  "setupFiles": ["<rootDir>/test/jest-setup.ts"],
   "moduleNameMapper": {
     "^@/(.*)$": "<rootDir>/src/$1",
     "^@common/(.*)$": "<rootDir>/src/common/$1",
