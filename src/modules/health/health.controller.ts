@@ -1,7 +1,9 @@
 import { Controller, Get, HttpCode, HttpException, HttpStatus } from '@nestjs/common';
+import { Public } from '../identity/auth/jwt-auth.guard';
 import { HealthCheckResult, HealthReadyResult, HealthService } from './health.service';
 
 @Controller('health')
+@Public()
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
