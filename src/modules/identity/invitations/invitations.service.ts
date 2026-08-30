@@ -107,4 +107,35 @@ export class InvitationsService {
 
     return { id: user.id, email: user.email };
   }
+
+  async resend(userId: string, actorId: string, meta: RequestMetaInfo): Promise<void> {
+    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    if (!user) throw new AppError(ErrorCode.NOT_FOUND, 'User tidak ditemukan', 404);
+    if (user.status !== UserStatus.PENDING_INVITATION) {
+      throw new AppError(ErrorCode.VALIDATION_ERROR, 'User bukan dalam status undangan', 400);
+    }
+
+    const rawToken = crypto.randomBytes(32).toString('hex');
+    const tokenHash = crypto.createHash('sha256').update(rawToken).digest('hex');
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await this.prisma.invitationToken.create({
+      data: { id: uuidv4(), userId, tokenHash, expiresAt },
+    });
+
+    await this.audit.write({
+      actorId,
+      action: 'invitation.resent',
+      resourceType: 'invitation',
+      afterJson: { email: user.email },
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+
+    await this.mail.send({
+      to: user.email,
+      subject: 'Undangan BEM FSM CMS —dikirim ulang',
+      text: `Anda diundang sebagai ${user.roleCode} di CMS BEM FSM.\n\nToken undangan (berlaku 7 hari):\n\n${rawToken}\n\nGunakan endpoint POST /api/v1/invitations/accept dengan { token, password } untuk aktivasi.`,
+    });
+  }
 }

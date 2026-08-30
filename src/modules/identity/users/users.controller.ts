@@ -33,6 +33,22 @@ export class UsersController {
     return this.users.list(query);
   }
 
+  @Get(':id')
+  @Permissions('users.read')
+  async get(@Param('id') id: string) {
+    return this.users.get(id);
+  }
+
+  @Post(':id/resend-invitation')
+  @Permissions('users.create')
+  async resendInvitation(
+    @Param('id') id: string,
+    @CurrentUser() actor: AuthenticatedUser,
+    @RequestMeta() meta: RequestMetaInfo,
+  ) {
+    await this.users.resendInvitation(id, actor.sub, meta);
+  }
+
   @Post()
   @Permissions('users.create')
   @Throttle({ default: { limit: 30, ttl: 60_000 } })

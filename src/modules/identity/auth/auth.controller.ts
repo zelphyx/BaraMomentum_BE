@@ -113,6 +113,20 @@ export class AuthController {
   }
 
   @UseGuards(JwtAuthGuard)
+  @Post('logout-all')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  async logoutAll(
+    @Res({ passthrough: true }) res: Response,
+    @CurrentUser() user: AuthenticatedUser,
+    @RequestMeta() meta: RequestMetaInfo,
+  ) {
+    await this.auth.logoutAll(user.sub, meta);
+    if (env.AUTH_MODE === 'cookie') {
+      clearRefreshCookie(res);
+    }
+  }
+
+  @UseGuards(JwtAuthGuard)
   @Get('me')
   async me(@CurrentUser() user: AuthenticatedUser) {
     return this.auth.me(user.sub);

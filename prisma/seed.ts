@@ -141,6 +141,22 @@ async function main(): Promise<void> {
     console.log(`[seed] Super Admin ${bootstrapEmail} dibuat dengan passwordMustChange=true.`);
   }
 
+  // Article categories
+  const categories = [
+    { id: uuidv4(), name: 'Berita', slug: 'berita', description: 'Liputan dan pemberitaan terkini', sortOrder: 1 },
+    { id: uuidv4(), name: 'Opini', slug: 'opini', description: 'Tulisan reflektif dan argumentatif', sortOrder: 2 },
+    { id: uuidv4(), name: 'Liputan Khusus', slug: 'liputan-khusus', description: 'Seri liputan mendalam', sortOrder: 3 },
+    { id: uuidv4(), name: 'Wawancara', slug: 'wawancara', description: 'Hasil wawancara eksklusif dan feature', sortOrder: 4 },
+  ];
+  for (const cat of categories) {
+    await prisma.articleCategory.upsert({
+      where: { slug: cat.slug },
+      update: {},
+      create: cat,
+    });
+  }
+  console.log(`[seed] ${categories.length} article_categories ter-seed.`);
+
   console.log('[seed] Selesai.');
 }
 

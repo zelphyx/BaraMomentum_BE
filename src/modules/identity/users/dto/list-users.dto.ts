@@ -1,5 +1,5 @@
 import { Type } from 'class-transformer';
-import { IsEnum, IsInt, IsOptional, Max, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, Max, Min, MaxLength } from 'class-validator';
 import { UserRoleCode, UserStatus } from '@prisma/client';
 
 export class ListUsersDto {
@@ -23,4 +23,9 @@ export class ListUsersDto {
   @IsOptional()
   @IsEnum(UserStatus)
   status?: UserStatus;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(100)
+  search?: string;
 }

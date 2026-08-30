@@ -196,6 +196,20 @@ export class AuthService {
     });
   }
 
+  async logoutAll(
+    userId: string,
+    meta: { ip: string | null; userAgent: string | null },
+  ): Promise<void> {
+    await this.session.revokeAll(userId);
+    await this.audit.write({
+      actorId: userId,
+      action: 'user.logout_all',
+      resourceType: 'session',
+      ip: meta.ip,
+      userAgent: meta.userAgent,
+    });
+  }
+
   async me(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
     if (!user) throw new AppError('UNAUTHENTICATED', 'Tidak terautentikasi', 401);

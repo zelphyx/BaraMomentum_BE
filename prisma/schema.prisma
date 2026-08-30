@@ -57,7 +57,16 @@ model User {
   passwordResetTokens  PasswordResetToken[]
   invitationTokens     InvitationToken[]
   unitAssignments      UserUnitAssignment[]
+  createdUnits        OrganizationUnit[]   @relation("UnitCreatedBy")
+  updatedUnits        OrganizationUnit[]   @relation("UnitUpdatedBy")
   auditLogs            AuditLog[]
+  uploadedMedia        MediaAsset[]           @relation("MediaUploadedBy")
+  authoredArticles     Article[]              @relation("ArticleAuthor")
+  createdArticles      Article[]              @relation("ArticleCreatedBy")
+  updatedArticles      Article[]              @relation("ArticleUpdatedBy")
+  articleRevisions     ArticleRevision[]      @relation("ArticleRevisionCreatedBy")
+  createdInstagramPosts InstagramPost[]       @relation("InstagramPostCreatedBy")
+  updatedInstagramPosts InstagramPost[]       @relation("InstagramPostUpdatedBy")
 
   @@index([roleCode, status, deletedAt])
   @@index([deletedAt])
@@ -108,10 +117,12 @@ model UserUnitAssignment {
   roleId             String   @map("role_id") @db.Char(36)
   createdAt          DateTime @default(now()) @map("created_at") @db.DateTime(3)
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
-  role Role @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationUnit OrganizationUnit @relation(fields: [organizationUnitId], references: [id], onDelete: Cascade)
+  role             Role             @relation(fields: [roleId], references: [id], onDelete: Restrict)
 
   @@id([userId, organizationUnitId])
+  @@index([organizationUnitId])
   @@map("user_unit_assignments")
 }
 
@@ -171,7 +182,7 @@ model AuditLog {
   actorId      String?  @map("actor_id") @db.Char(36)
   action       String   @db.VarChar(64)
   resourceType String   @map("resource_type") @db.VarChar(64)
-  resourceId   String?  @map("resource_id") @db.Char(36)
+  resourceId   String? @map("resource_id") @db.Char(36)
   beforeJson   Json?    @map("before_json")
   afterJson    Json?    @map("after_json")
   ip           String?  @db.VarChar(45)
@@ -186,4 +197,295 @@ model AuditLog {
   @@index([resourceType, resourceId, createdAt])
   @@index([action, createdAt])
   @@map("audit_logs")
+}
+
+// ============================================================
+// ORGANIZATION UNITS
+// ============================================================
+
+enum UnitType {
+  TEAM
+  BUREAU
+  DIVISION
+}
+
+enum UnitStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+model OrganizationUnit {
+  id          String    @id @db.Char(36)
+  slug        String    @unique @db.VarChar(120)
+  name        String    @db.VarChar(200)
+  shortName   String?   @map("short_name") @db.VarChar(50)
+  type        UnitType
+  logoMediaId String?   @map("logo_media_id") @db.Char(36)
+  summary     String?   @db.VarChar(500)
+  description String?   @db.Text
+  status      UnitStatus @default(DRAFT)
+  sortOrder   Int       @default(0) @map("sort_order")
+  seoTitle    String?   @map("seo_title") @db.VarChar(255)
+  seoDesc     String?   @map("seo_desc") @db.VarChar(160)
+  createdById String?   @map("created_by_id") @db.Char(36)
+  updatedById String?   @map("updated_by_id") @db.Char(36)
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt   DateTime? @map("deleted_at") @db.DateTime(3)
+
+  logoMedia   MediaAsset?      @relation("UnitLogo", fields: [logoMediaId], references: [id], onDelete: SetNull)
+  createdBy   User?            @relation("UnitCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?            @relation("UnitUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  strategies  UnitStrategy[]
+  programs    UnitProgram[]
+  members     UnitMember[]
+  userAssignments UserUnitAssignment[]
+
+  @@index([status, sortOrder])
+  @@index([type, status])
+  @@index([deletedAt])
+  @@map("organization_units")
+}
+
+model UnitStrategy {
+  id                  String           @id @db.Char(36)
+  organizationUnitId   String           @map("organization_unit_id") @db.Char(36)
+  content             String           @db.Text
+  sortOrder           Int              @default(0) @map("sort_order")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  organizationUnit OrganizationUnit @relation(fields: [organizationUnitId], references: [id], onDelete: Cascade)
+
+  @@unique([organizationUnitId, sortOrder])
+  @@index([organizationUnitId])
+  @@map("unit_strategies")
+}
+
+enum ProgramStatus {
+  PLANNED
+  ACTIVE
+  COMPLETED
+}
+
+model UnitProgram {
+  id                  String         @id @db.Char(36)
+  organizationUnitId   String         @map("organization_unit_id") @db.Char(36)
+  name                String         @db.VarChar(255)
+  description         String?        @db.Text
+  scheduleLabel       String?        @map("schedule_label") @db.VarChar(100)
+  externalUrl         String?        @map("external_url") @db.VarChar(1024)
+  status              ProgramStatus  @default(PLANNED)
+  sortOrder           Int            @default(0) @map("sort_order")
+  createdAt           DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime       @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  organizationUnit OrganizationUnit @relation(fields: [organizationUnitId], references: [id], onDelete: Cascade)
+
+  @@index([organizationUnitId, sortOrder])
+  @@index([organizationUnitId])
+  @@map("unit_programs")
+}
+
+model UnitMember {
+  id                  String           @id @db.Char(36)
+  organizationUnitId   String           @map("organization_unit_id") @db.Char(36)
+  name                String           @db.VarChar(120)
+  role                String           @db.VarChar(100)
+  photoMediaId        String?          @map("photo_media_id") @db.Char(36)
+  photoAlt             String?          @map("photo_alt") @db.VarChar(255)
+  instagramUrl         String?          @map("instagram_url") @db.VarChar(255)
+  linkedinUrl          String?          @map("linkedin_url") @db.VarChar(255)
+  sortOrder           Int              @default(0) @map("sort_order")
+  isActive           Boolean          @default(true) @map("is_active")
+  createdAt           DateTime         @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt           DateTime         @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  organizationUnit OrganizationUnit @relation(fields: [organizationUnitId], references: [id], onDelete: Cascade)
+  photoMedia   MediaAsset?        @relation("MemberPhoto", fields: [photoMediaId], references: [id], onDelete: SetNull)
+
+  @@index([organizationUnitId, sortOrder])
+  @@index([organizationUnitId])
+  @@map("unit_members")
+}
+
+model MediaAsset {
+  id            String    @id @db.Char(36)
+  filename      String    @db.VarChar(255)
+  originalName  String    @map("original_name") @db.VarChar(255)
+  mimeType      String    @map("mime_type") @db.VarChar(64)
+  size          Int       @map("size") @db.Int
+  width         Int?      @map("width") @db.Int
+  height        Int?      @map("height") @db.Int
+  checksum      String    @db.VarChar(64)
+  storageKey    String    @map("storage_key") @db.VarChar(512)
+  url           String    @db.VarChar(1024)
+  alt           String?   @db.VarChar(255)
+  variant       String    @db.VarChar(32)
+  uploadedById  String?   @map("uploaded_by_id") @db.Char(36)
+  createdAt     DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt     DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt     DateTime? @map("deleted_at") @db.DateTime(3)
+
+  uploadedBy User? @relation("MediaUploadedBy", fields: [uploadedById], references: [id], onDelete: SetNull)
+  articleCovers Article[] @relation("ArticleCover")
+  unitLogos OrganizationUnit[] @relation("UnitLogo")
+  memberPhotos UnitMember[] @relation("MemberPhoto")
+
+  @@index([deletedAt])
+  @@index([uploadedById])
+  @@map("media_assets")
+}
+
+enum ArticleStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+enum ArticleVisibility {
+  PUBLIC
+  INTERNAL
+}
+
+model ArticleCategory {
+  id          String    @id @db.Char(36)
+  name        String    @db.VarChar(100)
+  slug        String    @unique @db.VarChar(120)
+  description String?   @db.VarChar(255)
+  sortOrder   Int       @default(0) @map("sort_order")
+  createdAt   DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime  @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  articles Article[] @relation("ArticleInCategory")
+
+  @@map("article_categories")
+}
+
+model Article {
+  id             String             @id @db.Char(36)
+  title          String             @db.VarChar(255)
+  slug           String             @unique @db.VarChar(260)
+  excerpt        String?            @db.VarChar(500)
+  content        String             @db.Text
+  coverMediaId   String?            @map("cover_media_id") @db.Char(36)
+  categoryId     String?            @map("category_id") @db.Char(36)
+  authorId       String?            @map("author_id") @db.Char(36)
+  status         ArticleStatus      @default(DRAFT)
+  visibility     ArticleVisibility  @default(PUBLIC)
+  isFeatured     Boolean            @default(false) @map("is_featured")
+  coverAlt       String?            @map("cover_alt") @db.VarChar(255)
+  searchText     String?            @map("search_text") @db.Text
+  wordCount      Int                @default(0) @map("word_count")
+  readingMinutes Int                @default(1) @map("reading_minutes")
+  publishedAt    DateTime?          @map("published_at") @db.DateTime(3)
+  scheduledAt    DateTime?          @map("scheduled_at") @db.DateTime(3)
+  version        Int                @default(1)
+  createdById    String?            @map("created_by_id") @db.Char(36)
+  updatedById    String?            @map("updated_by_id") @db.Char(36)
+  createdAt      DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime           @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime?          @map("deleted_at") @db.DateTime(3)
+
+  coverMedia  MediaAsset?        @relation("ArticleCover", fields: [coverMediaId], references: [id], onDelete: SetNull)
+  category    ArticleCategory?   @relation("ArticleInCategory", fields: [categoryId], references: [id], onDelete: SetNull)
+  author      User?              @relation("ArticleAuthor", fields: [authorId], references: [id], onDelete: SetNull)
+  createdBy   User?              @relation("ArticleCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy   User?              @relation("ArticleUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+  revisions   ArticleRevision[]
+
+  @@index([status, visibility, publishedAt])
+  @@index([categoryId, status, publishedAt])
+  @@index([isFeatured])
+  @@index([slug])
+  @@index([deletedAt])
+  @@index([authorId])
+  @@map("articles")
+}
+
+model ArticleRevision {
+  id         String   @id @db.Char(36)
+  articleId  String   @map("article_id") @db.Char(36)
+  beforeJson Json     @map("before_json")
+  afterJson  Json?    @map("after_json")
+  reason     String?  @db.VarChar(255)
+  createdById String? @map("created_by_id") @db.Char(36)
+  createdAt  DateTime @default(now()) @map("created_at") @db.DateTime(3)
+
+  article  Article @relation(fields: [articleId], references: [id], onDelete: Cascade)
+  createdBy User?  @relation("ArticleRevisionCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+
+  @@index([articleId, createdAt])
+  @@map("article_revisions")
+}
+
+model Setting {
+  key   String  @id @db.VarChar(100)
+  value String  @db.Text
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  @@map("settings")
+}
+
+// ============================================================
+// INSTAGRAM POSTS & PLACEMENTS
+// ============================================================
+
+enum InstagramContentType {
+  POST
+  REEL
+  CAROUSEL
+  UNKNOWN
+}
+
+enum InstagramPostStatus {
+  DRAFT
+  PUBLISHED
+}
+
+enum InstagramPlacementType {
+  HOME
+  INFORMATION
+}
+
+model InstagramPost {
+  id            String              @id @db.Char(36)
+  canonicalUrl  String             @unique @map("canonical_url") @db.VarChar(765)
+  shortcode     String             @unique
+  internalTitle String?             @map("internal_title") @db.VarChar(255)
+  contentType   InstagramContentType @default(UNKNOWN) @map("content_type")
+  status        InstagramPostStatus @default(DRAFT)
+  internalNote  String?             @map("internal_note") @db.Text
+  createdById  String?             @map("created_by_id") @db.Char(36)
+  updatedById  String?             @map("updated_by_id") @db.Char(36)
+  createdAt    DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt    DateTime           @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt    DateTime?          @map("deleted_at") @db.DateTime(3)
+
+  placements   InstagramPlacement[]
+
+  createdBy    User? @relation("InstagramPostCreatedBy", fields: [createdById], references: [id], onDelete: SetNull)
+  updatedBy    User? @relation("InstagramPostUpdatedBy", fields: [updatedById], references: [id], onDelete: SetNull)
+
+  @@index([status, deletedAt])
+  @@index([shortcode])
+  @@map("instagram_posts")
+}
+
+model InstagramPlacement {
+  id             String              @id @db.Char(36)
+  postId         String              @map("post_id") @db.Char(36)
+  placement      InstagramPlacementType
+  isHighlighted  Boolean            @default(false) @map("is_highlighted")
+  sortOrder      Int                @default(0) @map("sort_order")
+  createdAt      DateTime           @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime           @default(now()) @updatedAt @map("updated_at") @db.DateTime(3)
+
+  post   InstagramPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, placement])
+  @@index([placement, isHighlighted, sortOrder])
+  @@map("instagram_placements")
 }

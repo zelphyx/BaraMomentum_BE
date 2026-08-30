@@ -18,6 +18,7 @@ import { PermissionsService } from './rbac/permissions.service';
 import { PermissionsGuard } from './rbac/permissions.guard';
 import { UnitScopeGuard } from './rbac/unit-scope.guard';
 import { AuditService } from './audit/audit.service';
+import { AuditController } from './audit/audit.controller';
 import { UsersController } from './users/users.controller';
 import { UsersService } from './users/users.service';
 import { InvitationsController } from './invitations/invitations.controller';
@@ -42,7 +43,7 @@ const env = loadEnvConfig();
       },
     ]),
   ],
-  controllers: [AuthController, UsersController, InvitationsController],
+  controllers: [AuthController, UsersController, InvitationsController, AuditController],
   providers: [
     AuthService,
     TokenService,

@@ -1,6 +1,9 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import { existsSync } from 'fs';
+import { join } from 'path';
+import express from 'express';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import { AppModule } from './app.module';
@@ -13,6 +16,13 @@ async function bootstrap(): Promise<void> {
 
   app.use(helmet());
   app.use(cookieParser());
+
+  if (process.env.STORAGE_PROVIDER === 'local') {
+    const uploadsDir = join(process.cwd(), 'uploads');
+    if (existsSync(uploadsDir)) {
+      app.use('/uploads', express.static(uploadsDir));
+    }
+  }
 
   app.enableCors({
     origin: (process.env.FRONTEND_ORIGINS ?? '')

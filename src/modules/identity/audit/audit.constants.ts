@@ -15,4 +15,18 @@ export const AUDIT_ACTIONS = {
   INVITATION_ACCEPTED: 'invitation.accepted',
 } as const;
 
-export type AuditAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
+export type AuditLogAction = (typeof AUDIT_ACTIONS)[keyof typeof AUDIT_ACTIONS];
+
+export const AUDIT_RESOURCE_TYPES = [
+  'user',
+  'invitation',
+  'article',
+  'article_revision',
+  'instagram_post',
+  'organization_unit',
+  'media',
+  'settings',
+  'auth',
+] as const;
+
+export type ResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
