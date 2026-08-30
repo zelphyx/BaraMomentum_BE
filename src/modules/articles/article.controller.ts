@@ -187,6 +187,13 @@ export class ArticleController {
     return this.articles.listCategories();
   }
 
+  @Get('admin/article-categories')
+  @UseGuards(JwtAuthGuard, PermissionsGuard)
+  @Permissions('articles.read')
+  async adminListCategories() {
+    return this.articles.listCategories();
+  }
+
   @HttpPost('admin/article-categories')
   @UseGuards(JwtAuthGuard, PermissionsGuard)
   @Permissions('articles.create')

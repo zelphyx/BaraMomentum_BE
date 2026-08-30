@@ -33,6 +33,7 @@ export class S3StorageProvider extends StorageProvider {
         Key: key,
         Body: buffer,
         ContentType: mime,
+        ACL: 'public-read',
       }),
     );
     return { url: `${this.cdnBase}/${key}` };
