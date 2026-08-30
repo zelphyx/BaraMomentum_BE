@@ -34,20 +34,22 @@ const readRefreshToken = (req: Request, body?: string): string => {
 };
 
 const setRefreshCookie = (res: Response, token: string): void => {
+  const isDev = env.NODE_ENV !== 'production';
   res.cookie(REFRESH_COOKIE, token, {
     httpOnly: true,
     secure: env.NODE_ENV === 'production',
     sameSite: 'lax',
     path: '/api/v1/auth',
-    domain: env.COOKIE_DOMAIN || undefined,
+    domain: isDev ? undefined : env.COOKIE_DOMAIN || undefined,
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
 const clearRefreshCookie = (res: Response): void => {
+  const isDev = env.NODE_ENV !== 'production';
   res.clearCookie(REFRESH_COOKIE, {
     path: '/api/v1/auth',
-    domain: env.COOKIE_DOMAIN || undefined,
+    domain: isDev ? undefined : env.COOKIE_DOMAIN || undefined,
   });
 };
 
