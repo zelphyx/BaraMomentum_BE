@@ -133,6 +133,9 @@ export class ArticleResponseDto {
   excerpt!: string | null;
   content!: string;
   coverMediaId!: string | null;
+  coverUrl!: string | null;
+  coverWidth!: number | null;
+  coverHeight!: number | null;
   categoryId!: string | null;
   authorId!: string | null;
   status!: ArticleStatus;

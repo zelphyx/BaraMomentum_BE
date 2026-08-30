@@ -23,7 +23,14 @@ export class ArticleRepository {
   }
 
   async findBySlug(slug: string): Promise<Article | null> {
-    return this.prisma.article.findUnique({ where: { slug } });
+    return this.prisma.article.findUnique({
+      where: { slug },
+      include: {
+        coverMedia: { select: { id: true, url: true, width: true, height: true } },
+        category: { select: { id: true, name: true, slug: true } },
+        author: { select: { id: true, name: true, email: true } },
+      },
+    });
   }
 
   async findMany(params: {
@@ -54,6 +61,7 @@ export class ArticleRepository {
         include: {
           category: { select: { id: true, name: true, slug: true } },
           author: { select: { id: true, name: true } },
+          coverMedia: { select: { id: true, url: true, width: true, height: true } },
         },
       }),
       this.prisma.article.count({ where }),

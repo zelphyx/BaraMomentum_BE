@@ -82,7 +82,9 @@ export class InstagramService {
       where: { placement: 'INFORMATION' },
       orderBy: { sortOrder: 'desc' },
     });
-    const sortOrder = (lastPlacement?.sortOrder ?? -1) + 1;
+    const informationSortOrder = (lastPlacement?.sortOrder ?? -1) + 1;
+    const status = dto.status ?? InstagramPostStatus.DRAFT;
+    const isHighlighted = status === InstagramPostStatus.PUBLISHED;
 
     const post = await this.prisma.$transaction(async (tx) => {
       const p = await tx.instagramPost.create({
@@ -92,19 +94,33 @@ export class InstagramService {
           shortcode,
           internalTitle: dto.title,
           contentType,
-          status: dto.status ?? InstagramPostStatus.DRAFT,
+          status,
           createdById: actorId,
           updatedById: actorId,
         },
       });
 
+      // Always create INFORMATION placement for admin list filtering.
       await tx.instagramPlacement.create({
         data: {
           id: uuidv4(),
           postId: p.id,
           placement: 'INFORMATION',
-          sortOrder,
+          sortOrder: informationSortOrder,
           isHighlighted: false,
+        },
+      });
+
+      // Always create HOME placement so admin-created posts can appear on the public
+      // home page. isHighlighted follows the post's published state — admin can still
+      // override via the toggle endpoint.
+      await tx.instagramPlacement.create({
+        data: {
+          id: uuidv4(),
+          postId: p.id,
+          placement: 'HOME',
+          sortOrder: 0,
+          isHighlighted,
         },
       });
 
@@ -201,12 +217,42 @@ export class InstagramService {
       updateData.contentType = this.detectContentType(dto.canonicalUrl);
     }
 
-    const updated = await this.prisma.instagramPost.update({
-      where: { id },
-      data: updateData,
-      include: { placements: { orderBy: { sortOrder: 'asc' } } },
+    const targetStatus = dto.status ?? existing.status;
+    const homePlacement = existing.placements.find((p) => p.placement === 'HOME');
+    const shouldHighlight = targetStatus === InstagramPostStatus.PUBLISHED;
+
+    const updated = await this.prisma.$transaction(async (tx) => {
+      await tx.instagramPost.update({
+        where: { id },
+        data: updateData,
+      });
+
+      // Keep HOME placement in sync with the post's published state.
+      // Auto-create if missing (backfill for posts created before the create() fix).
+      if (homePlacement) {
+        await tx.instagramPlacement.update({
+          where: { id: homePlacement.id },
+          data: { isHighlighted: shouldHighlight },
+        });
+      } else {
+        await tx.instagramPlacement.create({
+          data: {
+            id: uuidv4(),
+            postId: id,
+            placement: 'HOME',
+            sortOrder: 0,
+            isHighlighted: shouldHighlight,
+          },
+        });
+      }
+
+      return tx.instagramPost.findUnique({
+        where: { id },
+        include: { placements: { orderBy: { sortOrder: 'asc' } } },
+      });
     });
-    return this.toResponse(updated);
+
+    return this.toResponse(updated!);
   }
 
   // ============================================================

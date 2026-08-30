@@ -322,6 +322,7 @@ export class ArticleService {
     status: string; visibility: string;
     isFeatured: boolean; coverAlt: string | null; wordCount: number; readingMinutes: number;
     publishedAt: Date | null; scheduledAt: Date | null; version: number; createdAt: Date; updatedAt: Date;
+    coverMedia?: { url: string; width: number | null; height: number | null } | null;
   }): ArticleResponseDto {
     return {
       id: a.id,
@@ -330,6 +331,9 @@ export class ArticleService {
       excerpt: a.excerpt,
       content: a.content,
       coverMediaId: a.coverMediaId,
+      coverUrl: a.coverMedia?.url ?? null,
+      coverWidth: a.coverMedia?.width ?? null,
+      coverHeight: a.coverMedia?.height ?? null,
       categoryId: a.categoryId,
       authorId: a.authorId,
       status: a.status as ArticleStatus,
