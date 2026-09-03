@@ -38,7 +38,10 @@ export class MediaResponseDto {
   height!: number | null;
   url!: string;
   variant!: string;
+  alt!: string | null;
   uploadedById!: string | null;
+  uploadedBy?: { id: string; email: string; name: string } | null;
+  usageCount!: number;
   createdAt!: Date;
 }
 

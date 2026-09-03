@@ -53,6 +53,19 @@ export class MediaRepository {
     });
   }
 
+  /**
+   * Active media (not soft-deleted) that were created before `cutoff` AND have no
+   * FK reference anywhere. Used by the abandoned-upload cleanup job — admin
+   * uploaded a file but never assigned it to any article/unit/member/avatar.
+   */
+  async findActiveUnreferencedOlderThan(cutoff: Date): Promise<MediaAsset[]> {
+    const all = await this.prisma.mediaAsset.findMany({
+      where: { deletedAt: null, createdAt: { lt: cutoff } },
+      select: { id: true, storageKey: true },
+    });
+    return all as MediaAsset[];
+  }
+
   async hardDelete(id: string): Promise<void> {
     await this.prisma.mediaAsset.delete({ where: { id } });
   }

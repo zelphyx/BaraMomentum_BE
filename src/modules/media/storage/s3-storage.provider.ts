@@ -23,7 +23,15 @@ export class S3StorageProvider extends StorageProvider {
       forcePathStyle: true,
     });
     this.bucket = env.S3_BUCKET;
-    this.cdnBase = env.CDN_BASE_URL.replace(/\/$/, '');
+    // CDN_BASE_URL may already include the bucket (`/bemfsm-media`) or not.
+    // MinIO path-style access requires `/{bucket}/{key}` in the URL, so we always
+    // normalize so that `this.cdnBase` ends with the bucket name.
+    const rawCdn = env.CDN_BASE_URL.replace(/\/$/, '');
+    if (rawCdn.endsWith(`/${this.bucket}`)) {
+      this.cdnBase = rawCdn;
+    } else {
+      this.cdnBase = `${rawCdn}/${this.bucket}`;
+    }
   }
 
   async put(key: string, buffer: Buffer, mime: string): Promise<{ url: string }> {

@@ -66,27 +66,40 @@ export class MediaService {
       uploadedById,
     });
 
-    return this.toResponse(asset);
+    const r = this.toResponse(asset);
+    r.usageCount = 0;
+    return r;
   }
 
   async list(dto: ListMediaDto): Promise<{ data: MediaResponseDto[]; total: number; page: number; pageSize: number }> {
     const page = dto.page ?? 1;
     const pageSize = dto.pageSize ?? 20;
     const { data, total } = await this.repo.findMany({ variant: dto.variant, page, pageSize });
-    return { data: data.map((m) => this.toResponse(m)), total, page, pageSize };
+    const responses = await Promise.all(
+      data.map(async (m) => {
+        const r = this.toResponse(m);
+        r.usageCount = await this.countReferences(m.id);
+        return r;
+      }),
+    );
+    return { data: responses, total, page, pageSize };
   }
 
   async get(id: string): Promise<MediaResponseDto> {
     const asset = await this.repo.findById(id);
     if (!asset || asset.deletedAt) throw new NotFoundException('Media not found');
-    return this.toResponse(asset);
+    const r = this.toResponse(asset);
+    r.usageCount = await this.countReferences(asset.id);
+    return r;
   }
 
   async update(id: string, dto: { alt?: string }): Promise<MediaResponseDto> {
     const asset = await this.repo.findById(id);
     if (!asset || asset.deletedAt) throw new NotFoundException('Media not found');
     const updated = await this.repo.updateAlt(id, dto.alt ?? asset.alt ?? '');
-    return this.toResponse(updated);
+    const r = this.toResponse(updated);
+    r.usageCount = await this.countReferences(updated.id);
+    return r;
   }
 
   async delete(id: string, actorId: string): Promise<void> {
@@ -127,7 +140,27 @@ export class MediaService {
     return count;
   }
 
-  private toResponse(asset: { id: string; filename: string; originalName: string; mimeType: string; size: number; width: number | null; height: number | null; url: string; variant: string; uploadedById: string | null; createdAt: Date }): MediaResponseDto {
+  /**
+   * Cleanup "abandoned uploads": admin uploaded media that was never assigned to
+   * any article/unit/member/avatar within ABANDONED_HOURS. Runs daily at 03:00 WIB
+   * so stale uploads don't accumulate in S3.
+   */
+  async cleanupAbandoned(abandonedHours = 24): Promise<number> {
+    const cutoff = new Date(Date.now() - abandonedHours * 60 * 60 * 1000);
+    const candidates = await this.repo.findActiveUnreferencedOlderThan(cutoff);
+    let count = 0;
+    for (const asset of candidates) {
+      const refCount = await this.countReferences(asset.id);
+      if (refCount === 0) {
+        await this.storage.delete(asset.storageKey);
+        await this.repo.hardDelete(asset.id);
+        count++;
+      }
+    }
+    return count;
+  }
+
+  private toResponse(asset: { id: string; filename: string; originalName: string; mimeType: string; size: number; width: number | null; height: number | null; url: string; variant: string; alt: string | null; uploadedById: string | null; uploadedBy?: { id: string; email: string; name: string } | null; createdAt: Date }): MediaResponseDto {
     return {
       id: asset.id,
       filename: asset.filename,
@@ -138,7 +171,10 @@ export class MediaService {
       height: asset.height,
       url: asset.url,
       variant: asset.variant,
+      alt: asset.alt ?? null,
       uploadedById: asset.uploadedById,
+      uploadedBy: asset.uploadedBy ?? null,
+      usageCount: 0,
       createdAt: asset.createdAt,
     };
   }
