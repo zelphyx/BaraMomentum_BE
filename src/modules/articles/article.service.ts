@@ -26,6 +26,8 @@ export class ArticleService {
     const sanitized = this.sanitizer.sanitize(dto.content);
     const plainText = this.sanitizer.extractPlainText(sanitized);
     const wordCount = this.sanitizer.computeWordCount(plainText);
+    const wantsPublish = dto.status === ArticleStatus.PUBLISHED;
+
     const article = await this.repo.create({
       id: uuidv4(),
       title: dto.title,
@@ -42,7 +44,16 @@ export class ArticleService {
       readingMinutes: this.sanitizer.computeReadingMinutes(wordCount),
       createdById: actorId,
       updatedById: actorId,
+      status: wantsPublish ? 'PUBLISHED' : 'DRAFT',
+      publishedAt: wantsPublish ? new Date() : null,
     } as unknown as Prisma.ArticleUncheckedCreateInput);
+
+    // If user asked to publish immediately, run the same validation gate as the
+    // dedicated /publish endpoint so missing fields fail loud with 412.
+    if (wantsPublish) {
+      this.validatePublishRequirements(article);
+    }
+
     return this.toResponse(article);
   }
 

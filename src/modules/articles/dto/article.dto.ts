@@ -50,6 +50,10 @@ export class CreateArticleDto {
   @IsString()
   @MaxLength(255)
   coverAlt?: string;
+
+  @IsOptional()
+  @IsEnum(ArticleStatus)
+  status?: ArticleStatus;
 }
 
 export class UpdateArticleDto {
