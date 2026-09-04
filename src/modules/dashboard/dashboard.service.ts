@@ -32,7 +32,14 @@ export class DashboardService {
         where: { deletedAt: null },
         orderBy: { publishedAt: 'desc' },
         take: 5,
-        select: { id: true, title: true, slug: true, status: true, publishedAt: true },
+        select: {
+          id: true,
+          title: true,
+          slug: true,
+          status: true,
+          publishedAt: true,
+          coverMedia: { select: { url: true, alt: true } },
+        },
       }),
       this.prisma.user.findMany({
         where: { deletedAt: null },
@@ -63,6 +70,8 @@ export class DashboardService {
         slug: a.slug,
         status: a.status,
         publishedAt: a.publishedAt,
+        coverImageUrl: a.coverMedia?.url ?? null,
+        coverAlt: a.coverMedia?.alt ?? null,
       })),
       recentUsers: recentUsers.map((u) => ({
         id: u.id,
